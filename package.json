@@ -1,0 +1,20 @@
+{
+    "name": "pygrb",
+    "description": "Package for obtaining ang processing of GRB data",
+    "author": "Mozgunov Georgiy",
+    "license": "MIT",
+    "version": "0.1.0",
+    "keywords": [
+        "python",
+        "grb",
+        "astrophysics"
+    ],
+    "homepage": "",
+    "repository": {
+        "type": "git",
+        "url": ""
+    },
+    "dependencies": {
+        "python": ">=3.6"
+    }
+}
