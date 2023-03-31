@@ -9,7 +9,6 @@ import matplotlib as mpl
 from .time import get_ijd_from_utc, get_ijd_from_Fermi_seconds
 from .utils import get_first_intersection, is_iterable
 import pickle
-from numba import jit
 from .config import ACS_DATA_PATH
 
 
@@ -88,7 +87,6 @@ class LightCurve():
                 ax.set_yscale('log')
 
     @staticmethod
-    @jit
     def _rebin_data(times,signal,resolution,bin_duration: float = None, binning: np.array = None):
 
         '''
@@ -201,7 +199,6 @@ class LightCurve():
         
         return self
 
-    @jit
     def __get_light_curve_from_data(self,data):
         '''
         Appends data from data to light curve object
@@ -414,7 +411,6 @@ class GBM_LightCurve(LightCurve):
             self.signal = self.original_signal
             self.signal_err = np.sqrt(self.original_signal)
             
-    @jit
     def __get_light_curve_from_web(self,detector_mask: str, apply_redshift: bool, filter_energy: bool, save_photons: bool,scale = 'utc'):
         '''
         Binds the light curve from individual photons in lumined detectors
@@ -623,4 +619,3 @@ def calculate_t_90(times: np.array, intergal_curve: np.array, left_interval, rig
         plt.axvline(t_95_high)
 
     return t_90, (-negative_err, positive_err)
-
