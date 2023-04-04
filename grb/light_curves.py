@@ -94,9 +94,13 @@ class LightCurve():
 
         '''
         if binning is None:
-            binning = np.linspace(times[0]-resolution+bin_duration,
-                                  times[-1]+resolution-bin_duration,
-                                  num=int(((times[-1]-resolution) - (times[0]+resolution))/bin_duration))
+            # binning = np.linspace(times[0]+bin_duration,
+            #                       times[-1]-bin_duration,
+            #                       num=int(((times[-1]-resolution) - (times[0]+resolution))/bin_duration))
+            N_new_bins = int(np.floor((times[-1] - times[0] + 2*resolution)/bin_duration)+1)
+            binning = np.linspace(times[0] - resolution + bin_duration/2,
+                                  times[0] - resolution + bin_duration/2 + N_new_bins*bin_duration,
+                                  num=N_new_bins+1)
 
         bined_signal = np.asarray([np.sum(signal[(times>time-bin_duration/2)&(times<=time+bin_duration/2)]) for time in binning])
         bined_signal_err = np.asarray([np.std(signal[(times>time-bin_duration/2)&(times<=time+bin_duration/2)]) for time in binning])
