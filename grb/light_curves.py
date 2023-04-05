@@ -98,16 +98,22 @@ class LightCurve():
             #                       times[-1]-bin_duration,
             #                       num=int(((times[-1]-resolution) - (times[0]+resolution))/bin_duration))
             N_new_bins = int(np.floor((times[-1] - times[0] + 2*resolution)/bin_duration)+1)
-            binning = np.linspace(times[0] - resolution + bin_duration/2,
-                                  times[0] - resolution + bin_duration/2 + N_new_bins*bin_duration,
-                                  num=N_new_bins+1)
+            binning = times[0] - resolution + np.linspace(0, N_new_bins*bin_duration, num = N_new_bins+1)
+            
+        new_times = binning[:-1] + bin_duration/2
+        # fill the time error array
+        new_times_err = np.ones_like(new_times)*bin_duration/2
+        # determine the number of counts in each bin
+        new_counts = np.histogram(times, bins=binning)[0]
+        # determine the signal in each bin
+        new_signal = np.histogram(times, bins=binning, weights=signal)[0]
+        # determine the signal error in each bin
+        new_signal_err = np.sqrt(np.histogram(times, bins=binning, weights=signal**2)[0])
+        # determine the signal error in each bin
+        new_signal_err = new_signal_err/np.sqrt(new_counts)
+        # return the binned data
+        return new_times[:-1], new_times_err[:-1], new_signal[:-1], new_signal_err[:-1], binning
 
-        bined_signal = np.asarray([np.sum(signal[(times>time-bin_duration/2)&(times<=time+bin_duration/2)]) for time in binning])
-        bined_signal_err = np.asarray([np.std(signal[(times>time-bin_duration/2)&(times<=time+bin_duration/2)]) for time in binning])
-        bined_times = np.asarray([time for time in binning])
-        bined_times_err = np.asarray([bin_duration/2 for time in binning])
-
-        return bined_times,bined_times_err,bined_signal,bined_signal_err,binning
 
     def rebin(self,bin_duration: float = None, reset: bool = True):
         '''
