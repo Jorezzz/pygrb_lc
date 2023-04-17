@@ -448,7 +448,10 @@ class GBM_LightCurve(LightCurve):
             if apply_redshift:
                 data[:,0], data[:,1] = self.apply_redshift(data[:,0], data[:,1],self.redshift)
             if filter_energy is not None:
-                data = self.filter_energy(data,**filter_energy)
+                if isinstance(filter_energy,dict):
+                    data = self.filter_energy(data, detector = detector, **filter_energy)
+                else:
+                    data = self.filter_energy(data, detector = detector)
 
             if scale == 'ijd':
                 trigger_time_ijd = get_ijd_from_Fermi_seconds(tzero)
@@ -486,7 +489,7 @@ class GBM_LightCurve(LightCurve):
         raise ValueError(f'No data found for {self.code} detector {detector}') 
         
     @staticmethod
-    def filter_energy(data: np.ndarray, low_en: float = 6, high_en: float = 850, detector: str = 'n0'):
+    def filter_energy(data: np.ndarray, low_en: float = None, high_en: float = None, detector: str = 'n0'):
         '''
         Filter the energy of the light curve
         Args:
@@ -496,11 +499,11 @@ class GBM_LightCurve(LightCurve):
             detector (str, optional): GBM detector code
         '''
         if detector[0] == 'b':
-            low_en = low_en if low_en else 200
-            high_en = high_en if high_en else 6500
+            low_en = low_en if low_en is not None else 200
+            high_en = high_en if high_en is not None else 6500
         elif detector[0] == 'n':
-            low_en = low_en if low_en else  6
-            high_en = high_en if high_en else 850
+            low_en = low_en if low_en is not None else  6
+            high_en = high_en if high_en is not None else 850
             
         return data[(data[:,1]>low_en)&(data[:,1]<high_en)]
             
