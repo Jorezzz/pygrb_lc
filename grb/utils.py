@@ -1,6 +1,7 @@
 import numpy as np
 import bs4
 import pandas as pd
+from .config import GBM_DETECTOR_CODES
 
 def Chi2_polyval(x: np.array, y: np.array, param: np.array):
     """
@@ -77,3 +78,13 @@ def retry(expr, tries = 5):
         except Exception as e:
             if i == tries - 1:
                 raise e
+            
+def get_detectors_from_GBM_mask(detector_mask: str):
+    '''
+    Using GBM_DETECTOR_CODES converts string of 0 and 1 to list om most luminant detectors
+    Args:
+        detector_mask: string of 0 and 1
+    Returns:
+        list of most luminant detectors (list[str])
+    '''
+    return [GBM_DETECTOR_CODES[i] for i,value in enumerate(list(detector_mask)) if value == '1']
