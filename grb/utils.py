@@ -1,7 +1,7 @@
 import numpy as np
 import bs4
 import pandas as pd
-from .config import GBM_DETECTOR_CODES
+from .config import GBM_DETECTOR_CODES, logging
 
 def Chi2_polyval(x: np.array, y: np.array, param: np.array):
     """
@@ -73,9 +73,11 @@ def retry(expr, tries = 5):
         tries: number of tries
     '''
     for i in range(tries):
+        logging.debug(f'Attempt {i+1} of {tries}')
         try:
             return expr
         except Exception as e:
+            logging.error(f'Attempt {i+1} of {tries} failed, {e}')
             if i == tries - 1:
                 raise e
             

@@ -7,9 +7,11 @@ from astropy.io import fits
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from .time import change_fermi_seconds, change_utc
-from .utils import get_first_intersection, is_iterable
+from .utils import get_first_intersection, is_iterable, retry
 import pickle
 from .config import ACS_DATA_PATH
+
+logging.getLogger('matplotlib.font_manager').setLevel(logging.ERROR)
 
 
 class LightCurve():
@@ -232,7 +234,7 @@ class LightCurve():
             self.original_times = data[:,0]
             self.original_signal = data[:,1]
             
-            self.original_resolution = round(np.mean(self.times[1:] - self.times[:-1]),3) # determine size of time window
+            self.original_resolution = round(np.mean(self.original_times[1:] - self.original_times[:-1]),3) # determine size of time window
             self._reset_light_curve()
         elif data.shape[1] == 4:
             self.original_times = data[:,0]
@@ -295,7 +297,7 @@ class SPI_ACS_LightCurve(LightCurve):
             else:
                 raise NotImplementedError(f'Loading method {loading_method} not supported')
 
-            self.original_resolution = round(np.mean(self.times[1:] - self.times[:-1]), 3) # determine size of time window
+            self.original_resolution = round(np.mean(self.original_times[1:] - self.original_times[:-1]), 3) # determine size of time window
             self._reset_light_curve()
 
     def __get_light_curve_from_file(self,scale = 'utc'):
@@ -457,14 +459,16 @@ class GBM_LightCurve(LightCurve):
         signal_array = []
 
         if load_daily:
+            logging.debug('Loading daily data')
             tzero = change_utc(self.event_time, 'fermi_seconds')
             left = pd.to_datetime(change_fermi_seconds(tzero - self.duration, 'utc')).to_pydatetime()
             right = pd.to_datetime(change_fermi_seconds(tzero + self.duration, 'utc')).to_pydatetime()
 
             left_new = datetime.datetime(left.year, left.month, left.day, left.hour)
-            right_new = datetime.datetime(right.year, right.month, right.day, right.hour + 1)
+            right_new = datetime.datetime(right.year, right.month, right.day, right.hour)
 
         for detector in lumined_detectors:
+            logging.debug(f'Loading data from {detector}')
             if load_daily:
                 data = None
                 for date in pd.date_range(left_new, right_new, freq='1H'):
@@ -520,8 +524,9 @@ class GBM_LightCurve(LightCurve):
             astropy.io.fits
         '''
         for i in range(5):
+            logging.debug(f'Loading {url}_v0{i}.{file_extension}, try {i}')
             try:
-                return fits.open(f"{url}_v0{i}.{file_extension}")
+                return retry(fits.open(f"{url}_v0{i}.{file_extension}"))
             except requests.exceptions.HTTPError:
                 pass
         raise ValueError(f'No data found for {url}_v0{i}.{file_extension}') 
@@ -568,7 +573,7 @@ class GBM_LightCurve(LightCurve):
             self
         '''
         if (bin_duration is None) or (reset is False):
-            super().rebin(bin_duration, reset)
+            return super().rebin(bin_duration, reset)
         else:
             bined_times, bined_times_err, bined_signal, bined_signal_err, _ = self.rebin_data(self.photon_data[:,0], np.full(self.photon_data.shape[0],1), 0, bin_duration)
 

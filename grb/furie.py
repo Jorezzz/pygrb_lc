@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from .light_curves import LightCurve
 from scipy.stats import chi2
+from typing import Callable, Iterable
 
 
 def make_pds(signal, time_step, pad_size = None):
@@ -53,10 +54,11 @@ def group_log_bins(freqs: np.array, ps: np.array, N_bins: int = 30, step: float 
 
 class FurieLightCurve():
     def __init__(self, light_curve: LightCurve, 
-                       interval_t90: tuple = None,
+                       interval_t90: Iterable = None,
                        bkg_substraction_resolution: float = 10,
                        bkg_polynom_degree: int = 3,
                        pad_size: int = None,
+                       window: Callable = None
                        ):
 
         '''
@@ -65,6 +67,8 @@ class FurieLightCurve():
             interval_t90 (tuple, optional): time interval for t90. If None, uses 2 and 3 quartile of time
             bkg_substraction_resolution (float, optional): background substraction resolution, defaults to 10
             bkg_polynom_degree (int, optional): background polynom degree, defaults to 3
+            pad_size (int, optional): number of bins to pad, if None then doesn't pad
+            window (function, optional): window function, that applies to signal, defaults to None
         '''
         self.light_curve = light_curve
 
@@ -80,7 +84,9 @@ class FurieLightCurve():
         rebined_param = rebined_param * (self.light_curve.original_resolution/self.light_curve.resolution)
 
         signal = self.light_curve.rebin().substract_polynom(rebined_param).set_intervals(interval_t90).signal
-        
+        if window is not None:
+            signal = signal * window(signal.shape[0])
+
         self.freqs, self.ps =  make_pds(signal+mean_bkg,self.light_curve.original_resolution, pad_size)
         self.freqs_err, self.ps_err = np.full(self.freqs.shape[0], 0), np.sqrt(self.ps)
 
@@ -132,6 +138,8 @@ class FurieLightCurve():
                 ax.set_xscale('log')
             if logy:
                 ax.set_yscale('log')
+                
+        
 
 
         
