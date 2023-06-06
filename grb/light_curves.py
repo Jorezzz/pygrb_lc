@@ -624,6 +624,14 @@ def limit_to_time_interval(times: np.array, signal: np.array, intervals):
     return times[mask], signal[mask]
 
 def get_integral_curve(signal: np.array, times: np.array = None, params: np.array = None):
+    '''
+    Calculates the integral of a signal over time.
+
+    Args:
+        signal (np.array): A numpy array containing the signal to integrate.
+        times (np.array, optional): A numpy array containing the time values corresponding to the signal. Defaults to None.
+        params (np.array, optional): A numpy array containing the polynomial coefficients to subtract from the signal. Defaults to None.
+    '''
     if times is None:
         return np.cumsum(signal)
     else:
