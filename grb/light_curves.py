@@ -477,6 +477,8 @@ class GBM_LightCurve(LightCurve):
                     ebounds = {line[0]:np.sqrt(line[1]*line[2]) for line in hdul[1].data}
                     day_data = np.array(hdul[2].data.tolist())
                     day_data[:, 1] = [ebounds[x] for x in day_data[:, 1]]
+                    left_bound, right_bound = change_utc(str(date),'fermi_seconds'), change_utc(str(date + datetime.timedelta(hours=1)),'fermi_seconds')
+                    day_data = day_data[(day_data[:, 0] >= left_bound)&(day_data[:, 0] <= right_bound)]
                     data = np.concatenate((data, day_data)) if data is not None else day_data
                 data[:, 0] = data[:, 0] - tzero
                 data = data[np.where((data[:, 0] > -self.duration) & (data[:, 0] < self.duration))]
