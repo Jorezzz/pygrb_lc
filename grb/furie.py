@@ -77,18 +77,22 @@ class FurieLightCurve():
         
         bkg_intervals = [(self.light_curve.times[0]-self.light_curve.resolution,interval_t90[0]),
                          (interval_t90[1],self.light_curve.times[-1]+self.light_curve.resolution)]
+        
+        self.bkg_intervals = bkg_intervals
+        self.interval_t90 = interval_t90
 
         rebined_param = np.polyfit(self.light_curve.rebin(bkg_substraction_resolution).set_intervals(*bkg_intervals).times,self.light_curve.rebin(bkg_substraction_resolution).set_intervals(*bkg_intervals).signal,bkg_polynom_degree)
         rebined_param = rebined_param * (self.light_curve.original_resolution/self.light_curve.resolution)
         self.rebined_param = rebined_param
+        self.bkg_mean = np.mean(self.light_curve.rebin().set_intervals(*bkg_intervals).signal)
 
         signal = self.light_curve.rebin().substract_polynom(rebined_param).set_intervals(interval_t90).signal
-        self.bkg_std = np.std(signal)
+        
 
         if window is not None:
             signal = signal * window(signal.shape[0])
 
-        self.freqs, self.ps =  make_pds(signal + self.bkg_std, self.light_curve.original_resolution, pad_size)
+        self.freqs, self.ps =  make_pds(signal + self.bkg_mean, self.light_curve.original_resolution, pad_size)
         self.freqs_err, self.ps_err = np.full(self.freqs.shape[0], 0), np.sqrt(self.ps)
 
     def plot(self, kind: str = 'scatter', logx: bool = True, logy: bool = True, N_bins: int = 30, ax: mpl.axes.Axes = None, **kwargs):
