@@ -1,8 +1,6 @@
-logs/*
-light_curves/*
-pics/*
-grb/__pycache__/
-test/__pycache__/
-.pytest_cache/*
-.vscode/*
-data/*
+src/pygrb/__pycache__/
+tests/__pycache__/
+tests/pytest_cache/*
+dist/*
+src/pygrb.egg-info/*
+.coverage
