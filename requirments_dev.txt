@@ -7,3 +7,4 @@ astropy
 bs4
 pytest
 pytest-cov
+tox
