@@ -352,7 +352,8 @@ class SPI_ACS_LightCurve(LightCurve):
         '''
         url = f'https://www.isdc.unige.ch/~savchenk/spiacs-online/spiacs.pl?requeststring={self.event_time[0:10]}T{self.event_time[11:13]}%3A{self.event_time[14:16]}%3A{self.event_time[17:19]}+{self.duration}&generate=ipnlc&submit=Submit'
         data = []
-        for line in requests.get(url).text.split('<br>\n')[2:-2]:
+        r = requests.get(url, timeout=30)
+        for line in r.text.split('<br>\n')[2:-2]:
             try:
                 data.append([float(line.split()[0]),int(float(line.split()[1]))])
             except:
