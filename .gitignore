@@ -1,6 +1,7 @@
-src/pygrb/__pycache__/
+src/pygrb_lc/__pycache__/
 tests/__pycache__/
 tests/pytest_cache/*
 dist/*
-src/pygrb.egg-info/*
+src/pygrb_lc.egg-info
 .coverage
+.github/*

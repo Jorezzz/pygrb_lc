@@ -276,7 +276,7 @@ class SPI_ACS_LightCurve(LightCurve):
     def __init__(self, 
                  event_time: str,
                  duration: int, 
-                 loading_method: str = 'local',
+                 loading_method: str = 'web',
                  scale: str = 'utc',
                  **kwargs):
         '''
