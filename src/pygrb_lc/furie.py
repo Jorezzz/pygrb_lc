@@ -6,20 +6,24 @@ from scipy.stats import chi2
 from typing import Callable, Iterable
 
 
-def make_pds(signal, time_step, pad_size = None):
+def make_pds(signal, time_step, total_counts = None, pad_size = None):
     '''
     Get Power Density Spectrum from signal
     Args:
         signal (np.array): input signal
         time_step (float): time step
+        total_counts (int): total counts in signal, if None uses np.sum(signal)
         pad_size (int): number of bins to pad, if None then doesn't pad
     '''
     mean = np.mean(signal)
     if pad_size is not None:
         signal = np.pad(signal, (pad_size - signal.shape[0], 0), 'constant')
         
+    if total_counts is None:
+        total_counts = np.sum(signal)
+
     freqs = np.fft.fftfreq(signal.shape[0], time_step)
-    ps = 2*np.abs(np.fft.fft(signal - mean))**(2)/np.sum(signal)
+    ps = 2*np.abs(np.fft.fft(signal - mean))**(2)/total_counts
     mask = (freqs>0)
     
     return freqs[mask], ps[mask]
@@ -84,7 +88,7 @@ class FurieLightCurve():
         rebined_param = np.polyfit(self.light_curve.rebin(bkg_substraction_resolution).set_intervals(*bkg_intervals).times,self.light_curve.rebin(bkg_substraction_resolution).set_intervals(*bkg_intervals).signal,bkg_polynom_degree)
         rebined_param = rebined_param * (self.light_curve.original_resolution/self.light_curve.resolution)
         self.rebined_param = rebined_param
-        self.bkg_mean = np.mean(self.light_curve.rebin().set_intervals(*bkg_intervals).signal)
+        self.N = np.sum(self.light_curve.rebin().set_intervals(*bkg_intervals).signal)
 
         signal = self.light_curve.rebin().substract_polynom(rebined_param).set_intervals(interval_t90).signal
         
@@ -92,10 +96,10 @@ class FurieLightCurve():
         if window is not None:
             signal = signal * window(signal.shape[0])
 
-        self.freqs, self.ps =  make_pds(signal + self.bkg_mean, self.light_curve.original_resolution, pad_size)
+        self.freqs, self.ps =  make_pds(signal, self.light_curve.original_resolution, self.N, pad_size)
         self.freqs_err, self.ps_err = np.full(self.freqs.shape[0], 0), np.sqrt(self.ps)
 
-    def plot(self, kind: str = 'scatter', logx: bool = True, logy: bool = True, N_bins: int = 30, ax: mpl.axes.Axes = None, **kwargs):
+    def plot(self, kind: str = 'scatter', subtract_poisson = False, logx: bool = True, logy: bool = True, N_bins: int = 30, ax: mpl.axes.Axes = None, **kwargs):
         '''
         Plot PDS
         Args:
@@ -111,6 +115,9 @@ class FurieLightCurve():
         else:
             x,x_err,y,y_err = group_log_bins(self.freqs, self.ps, N_bins)
 
+        if subtract_poisson:
+            y = y - 2
+            
         if ax is None:
             if kind == 'plot':
                 plt.plot(x, y, **kwargs)
@@ -143,11 +150,3 @@ class FurieLightCurve():
                 ax.set_xscale('log')
             if logy:
                 ax.set_yscale('log')
-                
-        
-
-
-        
-
-
-    

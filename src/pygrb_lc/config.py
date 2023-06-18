@@ -31,6 +31,7 @@ USER_AGENTS = [
 ]
 
 GBM_DETECTOR_CODES = {0:'n0',1:'n1',2:'n2',3:'n3',4:'n4',5:'n5',6:'n6',7:'n7',8:'n8',9:'n9',10:'na',11:'nb',12:'b0',13:'b1'}
+GBM_DETECTORS = [item for item in GBM_DETECTOR_CODES.values()]
 
 logging.basicConfig(format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s', filename=f'{LOGS_PATH}log.log',
                     level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S')

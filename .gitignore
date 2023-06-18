@@ -4,4 +4,3 @@ tests/pytest_cache/*
 dist/*
 src/pygrb_lc.egg-info
 .coverage
-.github/*

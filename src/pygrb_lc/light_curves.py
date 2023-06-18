@@ -2,7 +2,7 @@ import requests
 import pandas as pd
 import datetime
 import numpy as np
-from .config import LIGHT_CURVE_SAVE, GBM_DETECTOR_CODES, logging
+from .config import LIGHT_CURVE_SAVE, GBM_DETECTOR_CODES, logging, GBM_DETECTORS
 from astropy.io import fits
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -710,7 +710,7 @@ def calculate_t_90(times: np.array, intergal_curve: np.array, left_interval, rig
     return t_90, (-negative_err, positive_err)
 
 def plot_gbm_all_detectors(center_time: str, duration: float, binning: float = 0.5):
-    detector_list = [x for _,x in GBM_DETECTOR_CODES.items() if x[0] == 'n']
+    detector_list = [x for x in GBM_DETECTORS if x[0] == 'n']
     data = {}
 
     fig, ax = plt.subplots(4,3,figsize=(30,30))
