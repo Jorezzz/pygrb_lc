@@ -27,6 +27,6 @@ jobs:
           NONE_STRING_TOKEN: "#none"
 
       - name: Update version in setup.cfg
-        run: >-
-          v=${{ steps.bump_version.outputs.new_tag }}
-          sed -i "s/version = [0-9]*.[0-9]*.[0-9]*/version = ${v}/1" setup.cfg
+        run: |
+          export V=${{ steps.bump_version.outputs.new_tag }}
+          sed -i "s/version = [0-9]*.[0-9]*.[0-9]*/version = ${V}/1" setup.cfg
