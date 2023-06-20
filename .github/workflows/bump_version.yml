@@ -1,0 +1,32 @@
+name: Bump version
+on:
+  push:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: '0'
+
+      - name: Bump version and push tag
+        id: bump_version
+        uses: anothrNick/github-tag-action@1.64.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WITH_V: false
+          PRERELEASE: false
+          RELEASE_BRANCHES: ["release/**", "hotfix**", "master", "main", "maintance/**"]
+          INITIAL_VERSION: ["0.0.8"]
+          MAJOR_STRING_TOKEN: "#break"
+          MINOR_STRING_TOKEN: "#feat"
+          PATCH_STRING_TOKEN: "#patch"
+          NONE_STRING_TOKEN: "#none"
+
+      - name: Update version in setup.cfg
+        run: >-
+          v=${{ steps.bump_version.outputs.new_tag }}
+          sed -i "s/version = [0-9]*.[0-9]*.[0-9]*/version = ${v}/1" setup.cfg
