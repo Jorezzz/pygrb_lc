@@ -19,8 +19,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WITH_V: false
           PRERELEASE: false
-          RELEASE_BRANCHES: ["release/**", "hotfix**", "master", "main", "maintance/**"]
-          INITIAL_VERSION: ["0.0.8"]
+          RELEASE_BRANCHES: "release/**,hotfix**,master,main,maintance/**"
+          INITIAL_VERSION: "0.0.8"
           MAJOR_STRING_TOKEN: "#break"
           MINOR_STRING_TOKEN: "#feat"
           PATCH_STRING_TOKEN: "#patch"
