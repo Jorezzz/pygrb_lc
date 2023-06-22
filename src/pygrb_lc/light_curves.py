@@ -709,15 +709,15 @@ def calculate_t_90(times: np.array, intergal_curve: np.array, left_interval, rig
 
     return t_90, (-negative_err, positive_err)
 
-def plot_gbm_all_detectors(center_time: str, duration: float, binning: float = 0.5):
+def plot_gbm_all_detectors(center_time: str, duration: float, binning: float = 0.5, **kwargs):
     detector_list = [x for x in GBM_DETECTORS if x[0] == 'n']
     data = {}
 
     fig, ax = plt.subplots(4,3,figsize=(30,30))
     ax = ax.reshape(-1,)
     for i, detector in enumerate(detector_list[:-2]):
-        lc = GBM_LightCurve(center_time, [detector], duration = duration)
-        lc.rebin(0.5).plot(ax=ax[i], label = detector)
+        lc = GBM_LightCurve(center_time, [detector], duration = duration, **kwargs)
+        lc.rebin(binning).plot(ax=ax[i], label = detector)
         signal = lc.signal
         ax[i].axhline(np.mean(signal),color = 'blue')
         ax[i].axhline(np.mean(signal)+3*np.std(signal),color = 'green')

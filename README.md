@@ -20,7 +20,7 @@ from pygrb_lc.light_curves import LightCurve # base class for ligth curve
 lc = LightCurve()
 print(lc)
 ```
-It is created but empty, semplest way to provide data is by data argument, that requires numpy.ndarray with 2 (time, signal) or 4 (time, time_err, signal, signal_err) columns
+It is created but empty, semplest way to provide data is by ```data``` argument, that requires ```numpy.ndarray``` with 2 (time, signal) or 4 (time, time_err, signal, signal_err) columns
 ```python
 import numpy as np
 
@@ -40,7 +40,7 @@ lc2 = GBM_LightCurve('2020-01-01 00:00:00', ['na'], duration = 500, loading_meth
 ```
 ## Furie transformations
 
-Furie transformation is performed by FurieTransformation class. It requires LightCurve object as an argument
+Furie transformation is performed by FurieLightCurve class. It requires LightCurve object as an argument
 ```python
 from pygrb_lc.furie import FurieLightCurve
 
@@ -56,3 +56,10 @@ fig,(ax1,ax2) = plt.subplots(2,1)
 lc.plot(ax = ax1)
 flc.plot(ax = ax2)
 ```
+
+
+# Roadmap
+Add support of main GRB catalogues and their connection with light curves. 
+Create Catalogue class that can be compared and intersected to other. 
+Add support of spectra (based on current ```photon_data``` in GBM_LightCurve class)
+Add typical functions for approximation: Band function, power law, etc. and their interaction with ```LightCurve``` and ```FurieLightCurve``` classes.
