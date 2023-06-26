@@ -114,11 +114,11 @@ class LightCurve():
         # fill the time error array
         new_times_err = np.ones_like(new_times)*bin_duration/2
         # determine the number of counts in each bin
-        new_counts = np.histogram(times, bins=new_times)[0]
+        new_counts = np.histogram(times, bins=binning)[0]
         # determine the signal in each bin
-        new_signal = np.histogram(times, bins=new_times, weights=signal)[0]
+        new_signal = np.histogram(times, bins=binning, weights=signal)[0]
         # determine the signal error in each bin
-        new_signal_err = np.sqrt(np.histogram(times, bins=new_times, weights=signal**2)[0])
+        new_signal_err = np.sqrt(np.histogram(times, bins=binning, weights=signal**2)[0])
         # determine the signal error in each bin
         new_signal_err = new_signal_err/np.sqrt(new_counts)
         # return the binned data
@@ -234,14 +234,14 @@ class LightCurve():
             self.original_times = data[:,0]
             self.original_signal = data[:,1]
             
-            self.original_resolution = round(np.mean(self.original_times[1:] - self.original_times[:-1]),3) # determine size of time window
+            self.original_resolution = round(np.median(self.original_times[1:] - self.original_times[:-1]),3) # determine size of time window
             self._reset_light_curve()
         elif data.shape[1] == 4:
             self.original_times = data[:,0]
             self.original_signal = data[:,2]
             
             self.times = self.original_times
-            self.original_resolution = round(np.mean(self.times[1:] - self.times[:-1]),3) # determine size of time window
+            self.original_resolution = round(np.median(self.times[1:] - self.times[:-1]),3) # determine size of time window
             self.times_err = data[:,1]
             self.signal = self.original_signal
             self.signal_err = data[:,3]

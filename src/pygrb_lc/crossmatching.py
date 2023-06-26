@@ -1,5 +1,3 @@
-from .config import DATA_PATH, logging
-
 def find_closest_event(time,list_of_events):
     '''
     Return index of closest event to time by value
