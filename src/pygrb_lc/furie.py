@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from .light_curves import LightCurve
 from scipy.stats import chi2
-from typing import Callable, Iterable
+from collections.abc import Callable, Iterable
 
 
 def make_pds(signal, time_step, total_counts = None, pad_size = None):
@@ -58,11 +58,12 @@ def group_log_bins(freqs: np.array, ps: np.array, N_bins: int = 30, step: float 
 
 class FurieLightCurve():
     def __init__(self, light_curve: LightCurve, 
-                       interval_t90: Iterable = None,
+                       interval_t90: Iterable | None = None,
                        bkg_substraction_resolution: float = 10,
                        bkg_polynom_degree: int = 3,
-                       pad_size: int = None,
-                       window: Callable = None
+                       bkg_intervals: Iterable | None = None,
+                       pad_size: int | None  = None,
+                       window: Callable | None = None
                        ):
 
         '''
@@ -79,8 +80,11 @@ class FurieLightCurve():
         if interval_t90 is None:
             interval_t90 = (self.light_curve.times[0]/2,self.light_curve.times[-1]/2)
         
-        bkg_intervals = [(self.light_curve.times[0]-self.light_curve.resolution,interval_t90[0]),
+        if bkg_intervals is None:
+            bkg_intervals = [(self.light_curve.times[0]-self.light_curve.resolution,interval_t90[0]),
                          (interval_t90[1],self.light_curve.times[-1]+self.light_curve.resolution)]
+        else:
+            bkg_intervals = bkg_intervals
         
         self.bkg_intervals = bkg_intervals
         self.interval_t90 = interval_t90
