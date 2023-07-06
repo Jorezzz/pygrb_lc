@@ -715,7 +715,7 @@ def plot_gbm_all_detectors(center_time: str, duration: float, binning: float = 0
 
     fig, ax = plt.subplots(4,3,figsize=(30,30))
     ax = ax.reshape(-1,)
-    for i, detector in enumerate(detector_list[:-2]):
+    for i, detector in enumerate(detector_list):
         lc = GBM_LightCurve(center_time, [detector], duration = duration, **kwargs)
         lc.rebin(binning).plot(ax=ax[i], label = detector)
         signal = lc.signal

@@ -63,7 +63,10 @@ def parse_html_table(html_string: str):
                 continue
             all_td = tr.find_all('td')
             data.append([extract_number(td.get_text().strip()) for td in all_td])
-    return pd.DataFrame(data, columns = all_heads)
+    if len(all_heads) > 1:
+        return pd.DataFrame(data, columns = all_heads)
+    else:
+        return pd.DataFrame(data[1:], columns = data[0])
 
 def retry(expr, tries = 5):
     '''
