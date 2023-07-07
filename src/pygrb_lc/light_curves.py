@@ -709,12 +709,16 @@ def calculate_t_90(times: np.array, intergal_curve: np.array, left_interval, rig
 
     return t_90, (-negative_err, positive_err)
 
-def plot_gbm_all_detectors(center_time: str, duration: float, binning: float = 0.5, **kwargs):
+def plot_gbm_all_detectors(center_time: str, duration: float, binning: float = 0.5, axs = None, **kwargs):
     detector_list = [x for x in GBM_DETECTORS if x[0] == 'n']
     data = {}
 
-    fig, ax = plt.subplots(4,3,figsize=(30,30))
-    ax = ax.reshape(-1,)
+    if axs is None:
+        fig, ax = plt.subplots(4,3,figsize=(30,30))
+        ax = ax.reshape(-1,)
+    else:
+        ax = axs
+        
     for i, detector in enumerate(detector_list):
         lc = GBM_LightCurve(center_time, [detector], duration = duration, **kwargs)
         lc.rebin(binning).plot(ax=ax[i], label = detector)
@@ -724,6 +728,6 @@ def plot_gbm_all_detectors(center_time: str, duration: float, binning: float = 0
         ax[i].axhline(np.mean(signal)-3*np.std(signal),color = 'green')
         ax[i].legend()
         data[detector] = lc
-    fig.suptitle(center_time)
-    return fig, ax, data
+    plt.suptitle(center_time)
+    return ax, data
     # plt.savefig(IMAGE_PATH + center_time.replace(':','_') + '.png',bbox_inches='tight')
