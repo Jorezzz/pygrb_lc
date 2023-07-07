@@ -107,8 +107,8 @@ class LightCurve():
             # binning = np.linspace(times[0]+bin_duration,
             #                       times[-1]-bin_duration,
             #                       num=int(((times[-1]-resolution) - (times[0]+resolution))/bin_duration))
-            N_new_bins = int(np.floor((times[-1] - times[0] + 2*resolution)/bin_duration)+1)
-            binning = times[0] - resolution + np.linspace(0, N_new_bins*bin_duration, num = N_new_bins+1)
+            N_new_bins = int(np.floor((times[-1] - times[0] + resolution)/bin_duration)+1)
+            binning = times[0] - resolution/2 + np.linspace(0, N_new_bins*bin_duration, num = N_new_bins+1)
             
         new_times = binning[:-1] + bin_duration/2
         # fill the time error array
