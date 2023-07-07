@@ -57,9 +57,25 @@ lc.plot(ax = ax1)
 flc.plot(ax = ax2)
 ```
 
+# Catalog
+
+```Catalog```  class is an extension of pandas.DataFrame. It provides simplicity of manipulations and visualization and extend it with crossmatching functionality. Easiest way to start using it is to create it from existing tabular data. It is important to provide `event_column` argument, it is the name of column that will be used for crossmatching and comparison
+
+```python
+from pygrb_lc.catalogs import Catalog
+import pandas as pd
+import numpy as np
+
+data = np.loadtxt('test.txt')
+cat = Catalog(data, columns = ['datetime','duration'], event_column = 'datetime')
+cat.find_event(pd.Timestamp('2023-01-01 00:00:00'), precision = 10)
+```
+
+`precision` (in seconds) controls uncertainity that is allowed for the event. If there is no such event method will return `None`.
+There is a method of crossmatching two catalogs `crossmatch`, it works like inner join for SQL tables, but compares only corresponding `event_column` columns and allows uncertainity via `precision`. `precision = 0` equals to exact match.
+
 
 # Roadmap
-Add support of main GRB catalogues and their connection with light curves. 
-Create Catalogue class that can be compared and intersected to other. 
-Add support of spectra (based on current ```photon_data``` in GBM_LightCurve class)
-Add typical functions for approximation: Band function, power law, etc. and their interaction with ```LightCurve``` and ```FurieLightCurve``` classes.
+Add support of `LightCurve` class in `Catalog`
+Add support of spectra (based on current `photon_data` in `GBM_LightCurve` class)
+Add typical functions for approximation: Band function, power law, etc. and their interaction with `LightCurve` and `FurieLightCurve` classes.
