@@ -12,8 +12,6 @@ LIGHT_CURVE_SAVE = f'{ROOT_PATH}light_curves/'
 if not os.path.exists(LIGHT_CURVE_SAVE):
     os.makedirs(LIGHT_CURVE_SAVE)
 
-ACS_DATA_PATH = 'E:/ACS/'
-
 DATA_PATH = f'{ROOT_PATH}data/'
 if not os.path.exists(DATA_PATH):
     os.makedirs(DATA_PATH)

@@ -2,14 +2,13 @@ import requests
 import pandas as pd
 import datetime
 import numpy as np
-from .config import LIGHT_CURVE_SAVE, GBM_DETECTOR_CODES, logging, GBM_DETECTORS
+from .config import LIGHT_CURVE_SAVE, logging, GBM_DETECTORS
 from astropy.io import fits
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from .time import change_fermi_seconds, change_utc
 from .utils import get_first_intersection, is_iterable, retry
 import pickle
-from .config import ACS_DATA_PATH
 
 logging.getLogger('matplotlib.font_manager').setLevel(logging.ERROR)
 
@@ -18,7 +17,7 @@ class LightCurve():
     '''
     Base class for light curves from different sources
     '''
-    def __init__(self, event_time: str = None,duration: float = None, data: np.array = None):
+    def __init__(self, event_time: str = None, duration: float = None, data: np.array = None):
         '''
         Args:
             event_time (str, optional): time of the event in format 'YYYY-MM-DD HH:MM:SS'
@@ -44,9 +43,9 @@ class LightCurve():
         return f'{self.__class__.__name__}(event_time={self.event_time}, duration={self.duration}, original resolution={self.original_resolution})'
 
     def __eq__(self, other: object):
-        return isinstance(other, LightCurve) and self.__class__ == other.__class__ and self.event_time == other.event_time and self.duration == other.duration and self.original_resolution == other.original_resolution
+        return self.__class__ == other.__class__ and self.event_time == other.event_time and self.duration == other.duration and self.original_resolution == other.original_resolution
 
-    def plot(self,kind: str = 'plot',
+    def plot(self, kind: str = 'plot',
              logx: bool = None,
              logy: bool = None, 
              ax: mpl.axes.Axes = None, 
@@ -278,6 +277,7 @@ class SPI_ACS_LightCurve(LightCurve):
                  duration: int, 
                  loading_method: str = 'web',
                  scale: str = 'utc',
+                 acs_path = 'E:/ACS/',
                  **kwargs):
         '''
         Args:
@@ -286,12 +286,12 @@ class SPI_ACS_LightCurve(LightCurve):
             loading_method (str, optional): 'local' or 'web'
             scale (str, optional): 'utc' or 'ijd'
         '''
-        super().__init__(event_time,duration,**kwargs)
+        super().__init__(event_time, duration, **kwargs)
         self.event_time = self.event_time[:10] + ' ' + self.event_time[11:19]
         
         if self.original_times is None:
             if loading_method == 'local':
-                self.original_times,self.original_signal = self.__get_light_curve_from_file(scale = scale)
+                self.original_times,self.original_signal = self.__get_light_curve_from_file(scale = scale, acs_path = acs_path)
             elif loading_method =='web':
                 self.original_times,self.original_signal = self.__get_light_curve_from_web(scale = scale)
             else:
@@ -300,13 +300,13 @@ class SPI_ACS_LightCurve(LightCurve):
             self.original_resolution = round(np.mean(self.original_times[1:] - self.original_times[:-1]), 3) # determine size of time window
             self._reset_light_curve()
 
-    def __get_light_curve_from_file(self,scale = 'utc'):
+    def __get_light_curve_from_file(self,scale = 'utc', acs_path = 'E:/ACS/'):
         '''
         Load a light curve from raw scw files
         Args:
             scale (str, optional): scale of light curve, 'utc' (seconds from trigger) or 'ijd' (days from J2000)
         '''
-        with open(f'{ACS_DATA_PATH}swg_infoc.dat','r') as f:
+        with open(f'{acs_path}swg_infoc.dat','r') as f:
             acs_scw_df = [line.split() for line in f]
 
         acs_scw_df = pd.DataFrame(acs_scw_df,columns=['scw_id','obt_start','obt_finish','ijd_start','ijd_finish','scw_duration','x','y','z','ra','dec'])
@@ -325,7 +325,7 @@ class SPI_ACS_LightCurve(LightCurve):
         for _,row in scw_needed.iterrows():
             for i in range(5):
                 try:
-                    with open(f'{ACS_DATA_PATH}0.05s/{row["scw_id"][:4]}/{row["scw_id"]}.00{i}.dat','r') as f:
+                    with open(f'{acs_path}0.05s/{row["scw_id"][:4]}/{row["scw_id"]}.00{i}.dat','r') as f:
                         for line in f:
                             line = line.split()
                             if float(line[0]) > 0:

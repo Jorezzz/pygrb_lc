@@ -89,7 +89,9 @@ class FurieLightCurve():
         self.bkg_intervals = bkg_intervals
         self.interval_t90 = interval_t90
 
-        rebined_param = np.polyfit(self.light_curve.rebin(bkg_substraction_resolution).set_intervals(*bkg_intervals).times,self.light_curve.rebin(bkg_substraction_resolution).set_intervals(*bkg_intervals).signal,bkg_polynom_degree)
+        rebined_param = np.polyfit(self.light_curve.rebin(bkg_substraction_resolution).set_intervals(*bkg_intervals).times,
+                                   self.light_curve.rebin(bkg_substraction_resolution).set_intervals(*bkg_intervals).signal,
+                                   bkg_polynom_degree)
         rebined_param = rebined_param * (self.light_curve.original_resolution/self.light_curve.resolution)
         self.rebined_param = rebined_param
         self.N = np.sum(self.light_curve.rebin().set_intervals(*bkg_intervals).signal)
