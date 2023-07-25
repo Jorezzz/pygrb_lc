@@ -58,12 +58,12 @@ def group_log_bins(freqs: np.array, ps: np.array, N_bins: int = 30, step: float 
 
 class FurieLightCurve():
     def __init__(self, light_curve: LightCurve, 
-                       interval_t90: Iterable | None = None,
+                       interval_t90: Iterable = None,
                        bkg_substraction_resolution: float = 10,
                        bkg_polynom_degree: int = 3,
-                       bkg_intervals: Iterable | None = None,
-                       pad_size: int | None  = None,
-                       window: Callable | None = None
+                       bkg_intervals: Iterable = None,
+                       pad_size: int = None,
+                       window: Callable = None
                        ):
 
         '''
