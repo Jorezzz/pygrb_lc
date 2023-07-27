@@ -38,11 +38,11 @@ class Catalog(pd.DataFrame):
             precision (int, optional): precision of crossmatching in seconds
         '''
         for i,event in self.iterrows():
-            idx = self.find_event(event[self.event_column],other[other.event_column], precision)
+            idx = other.find_event(event[self.event_column], precision)
             if idx is not None:
                 for column in other.param_columns:
-                    column = column if column not in self.param_columns else column + '_other'
-                    self.loc[i,[column]] = other.iloc[idx][column]
+                    column_new = column if column not in self.param_columns else column + '_other'
+                    self.loc[self.index==i,[column_new]] = other.loc[other.index==idx,[column]].values
         return self
     
     def save(self, path):
