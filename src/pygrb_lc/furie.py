@@ -94,7 +94,7 @@ class FurieLightCurve():
                                    bkg_polynom_degree)
         rebined_param = rebined_param * (self.light_curve.original_resolution/self.light_curve.resolution)
         self.rebined_param = rebined_param
-        self.N = np.sum(self.light_curve.rebin().set_intervals(*bkg_intervals).signal)
+        self.N = np.sum(self.light_curve.rebin().set_intervals(*interval_t90).signal)
 
         signal = self.light_curve.rebin().substract_polynom(rebined_param).set_intervals(interval_t90).signal
         
