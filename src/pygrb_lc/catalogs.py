@@ -31,14 +31,14 @@ class Catalog(pd.DataFrame):
         else:
             return None
 
-    def crossmatch(self, other, precision: int = 5):
+    def crossmatch(self, other, precision = 5):
         '''
         Args:
             other (Catalog): instance of other catalog to match with
-            precision (int, optional): precision of crossmatching in seconds
+            precision (int, str, optional): precision of crossmatching in seconds, if str then column with name precision in seconds
         '''
         for i,event in self.iterrows():
-            idx = other.find_event(event[self.event_column], precision)
+            idx = other.find_event(event[self.event_column], precision if type(precision) is int else event[precision])
             if idx is not None:
                 for column in other.param_columns:
                     column_new = column if column not in self.param_columns else column + '_other'
