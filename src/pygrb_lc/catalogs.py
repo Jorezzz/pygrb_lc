@@ -83,8 +83,11 @@ class GBM_Catalog(Greiner_Catalog):
 
     def __find_gbm_code(self, grb_name):
         r = requests.get(f'https://www.mpe.mpg.de/~jcg/grb{grb_name}.html').text
-        regexs = re.findall(r'bn\d{9}', r)
-        if len(regexs) == 0:
-            return None
-        else:
+        if len(regexs:= re.findall(r'bn\d{9}', r)) > 0:
             return regexs[0]
+        if len(regexs:= re.findall(r'trigger \d{9}/\d{9}', r)) > 0 or len(regexs:= re.findall(r'trigger \d{9} / \d{9}', r)) > 0:
+            regexs = regexs[0].split('trigger')[1].strip().split('/')
+            if regexs[0].strip()[:6] == grb_name[:6]:
+                return regexs[0].strip()
+            else:
+                return regexs[1].strip()

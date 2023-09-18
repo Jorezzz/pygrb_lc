@@ -1,9 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-from .light_curves import LightCurve
 from scipy.stats import chi2
 from collections.abc import Callable, Iterable
+
+from .light_curves import LightCurve
 
 
 def make_pds(signal, time_step, total_counts = None, pad_size = None):

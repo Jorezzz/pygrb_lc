@@ -1,10 +1,12 @@
+from functools import lru_cache
+import random
+
 import requests
 from bs4 import BeautifulSoup
 from astropy.time import Time
-from functools import lru_cache
+
 from .utils import retry
 from .config import logging, USER_AGENTS
-import random
 
 headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36'}
 

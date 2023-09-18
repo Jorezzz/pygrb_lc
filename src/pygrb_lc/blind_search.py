@@ -1,7 +1,8 @@
 import numpy as np
+import matplotlib.pyplot as plt
+
 from .config import DATA_PATH, logging
 from .utils import Chi2_polyval
-import matplotlib.pyplot as plt
 from .light_curves import exclude_time_interval, LightCurve
 
 def filter_missing_data_and_flares(times, signal):
