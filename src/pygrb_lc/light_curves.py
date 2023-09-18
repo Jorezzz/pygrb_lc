@@ -1,14 +1,19 @@
-import requests
-import pandas as pd
+import ftplib
+import pickle
 import datetime
+from typing import Iterable
+
 import numpy as np
-from .config import LIGHT_CURVE_SAVE, logging, GBM_DETECTORS
 from astropy.io import fits
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import requests
+import pandas as pd
+
+from .config import LIGHT_CURVE_SAVE, logging, GBM_DETECTORS
 from .time import change_fermi_seconds, change_utc
-from .utils import get_first_intersection, is_iterable, retry
-import pickle
+from .utils import get_first_intersection, is_iterable, retry, parse_html_table, get_overlaping_intersection
+
 
 logging.getLogger('matplotlib.font_manager').setLevel(logging.ERROR)
 
@@ -268,7 +273,7 @@ class LightCurve():
 
 
 
-class SPI_ACS_LightCurve(LightCurve):
+class SPI_ACSLightCurve(LightCurve):
     '''
     Class for light curves from SPI-ACS/INTEGRAL
     '''
@@ -317,7 +322,7 @@ class SPI_ACS_LightCurve(LightCurve):
         center_time = datetime.datetime.strptime(self.event_time,'%Y-%m-%d %H:%M:%S')
         left_time = float(change_utc((center_time - datetime.timedelta(seconds=self.duration)).strftime('%Y-%m-%d %H:%M:%S'), 'ijd'))
         right_time = float(change_utc((center_time + datetime.timedelta(seconds=self.duration)).strftime('%Y-%m-%d %H:%M:%S'), 'ijd'))
-        scw_needed = acs_scw_df[((acs_scw_df['ijd_start']>left_time)&(acs_scw_df['ijd_start']<right_time))|((acs_scw_df['ijd_finish']>left_time)&(acs_scw_df['ijd_finish']<right_time))|((acs_scw_df['ijd_start']<left_time)&(acs_scw_df['ijd_finish']>left_time))|((acs_scw_df['ijd_start']<right_time)&(acs_scw_df['ijd_finish']>right_time))]
+        scw_needed = acs_scw_df[get_overlaping_intersection(left_time, right_time, acs_scw_df['ijd_start'], acs_scw_df['ijd_finish'])]
         if scw_needed.shape[0]==0:
             raise ValueError(f'No data found for {self.event_time}')
 
@@ -389,7 +394,7 @@ class SPI_ACS_LightCurve(LightCurve):
 
 
 
-class GBM_LightCurve(LightCurve):
+class GBMLightCurve(LightCurve):
     '''
     Class for light curves from GBM/Fermi
     '''
@@ -587,6 +592,109 @@ class GBM_LightCurve(LightCurve):
             self.resolution = bin_duration
 
             return self
+        
+
+
+class BATLightCurve(LightCurve):
+    '''
+    Class for light curves from BAT/Swift
+    '''
+    def __init__(self, event_time: str, 
+                 duration: float, 
+                 energy_range: list = [(50,100),(100,350)], 
+                 loading_method: str = 'web', 
+                 scale: str = 'utc', 
+                 **kwargs):
+        '''
+        Args:
+            event_time (str): date and time of event in ISO 8601 format
+            duration (int): duration of light curve in seconds
+            energy_range (tuple, optional): energy range of light curve, available ranges are (15,25),(25,50),(50,100),(100,350)
+            loading_method (str, optional): 'local' or 'web'
+            scale (str, optional): 'utc' or 'ijd'
+        '''
+        super().__init__(event_time, duration, **kwargs)
+        self.event_time = self.event_time[:10] + ' ' + self.event_time[11:19]
+        self.energy_range = energy_range
+        
+        if self.original_times is None:
+            if loading_method =='web':
+                self.original_times,self.original_signal = self.__get_light_curve_from_web(scale = scale)
+            else:
+                raise NotImplementedError(f'Loading method {loading_method} not supported')
+
+        self.original_resolution = 0.064 # 64 ms
+        self._reset_light_curve()
+
+    def __get_light_curve_from_web(self, scale: str):
+        event_datetime = pd.to_datetime(self.event_time)
+        left = (event_datetime - datetime.timedelta(seconds = self.duration))
+        right = (event_datetime + datetime.timedelta(seconds = self.duration))
+
+        columns = ['Begin','End','Target ID','Seg.','Target Name','R.A.','Dec.','Roll','XRT Mode','UVOT Mode','Merit','Time (s)','Date']
+        table = None
+        for date in pd.date_range(left.date(), right.date(), freq='1D'):
+            request = requests.get(f'https://www.swift.psu.edu/operations/obsSchedule.php?newdate={date.year}%2F{str(date.month).zfill(2)}%2F{str(date.day).zfill(2)}&type=1').text
+            add = parse_html_table(request)
+            add['Date'] = date.date()
+            table = pd.concat((table, add)).reset_index(drop=True)
+        table.columns = columns
+        table['obsid'] = table.apply(lambda x: f"{int(x['Target ID']):08d}{int(x['Seg.']):03d}", axis=1)
+        table['Begin'] = pd.to_datetime(table['Begin'])
+        table['End'] = pd.to_datetime(table['End'])
+
+        relevant = table[get_overlaping_intersection(left, right, table['Begin'], table['End'])][['Date','obsid']].drop_duplicates()
+
+        total = None
+        for _, row in relevant.iterrows():
+            try:
+                res = self.__download_ftp(row['Date'], row['obsid'])
+            except ftplib.error_perm:
+                res = self.__download_nasa(row['obsid'])
+            if res is None:
+                logging.error(f"No data for {row['Date']} {row['obsid']}")
+                continue
+            data = np.array([(float(x[0]),float(x[1][0]),float(x[1][1]),float(x[1][2]),float(x[1][3])) for x in res[1].data])
+            data[:,0] = data[:,0] - change_utc(self.event_time, 'fermi_seconds')
+            total = np.concatenate((total, data)) if total is not None else data
+        total = total[total[:,0].argsort()]
+        total = total[(total[:,0] >= -self.duration)&(total[:,0] <= self.duration)]
+
+        if scale == 'ijd':
+            event_time_ijd = change_utc(self.event_time, 'ijd')
+            total[:,0] = total[:,0]/(24*60*60) + event_time_ijd
+
+        columns = self.__determine_energy_range()
+
+        return total[:,0], total[:,columns[0]:(columns[-1]+1)].sum(axis=1)
+
+    def __determine_energy_range(self):
+        energy_ranges = [(15,25),(25,50),(50,100),(100,350)]
+        columns = []
+        for i, en_range in enumerate(energy_ranges):
+            if en_range in self.energy_range:
+                columns.append(i + 1)
+        return columns
+
+    def __download_nasa(self, obsid):
+        for idx in range(25):
+            url = f'https://swift.gsfc.nasa.gov/data/swift/.original/sw{obsid}.{idx:03d}/data/bat/rate/sw{obsid}brtms.lc.gz'
+            try:
+                return fits.open(url)
+            except Exception as e:
+                pass
+        return None
+    
+    def __download_ftp(self, date: str, obsid):
+        ftp = ftplib.FTP_TLS('heasarc.gsfc.nasa.gov')
+        ftp.login()
+        ftp.prot_p()
+
+        ftp_dir = f"swift/data/obs/{str(date)[0:4]}_{str(date)[5:7]}/{obsid}/bat/rate"
+        ftp.cwd(ftp_dir)
+        ftp.retrbinary("RETR " + ftp.nlst("*brtms.lc.gz")[0], open('BATLightCurve.lc.gz','wb').write)
+
+        return fits.open('BATLightCurve.lc.gz')
 
         
 
@@ -720,7 +828,7 @@ def plot_gbm_all_detectors(center_time: str, duration: float, binning: float = 0
         ax = axs
         
     for i, detector in enumerate(detector_list):
-        lc = GBM_LightCurve(center_time, [detector], duration = duration, **kwargs)
+        lc = GBMLightCurve(center_time, [detector], duration = duration, **kwargs)
         lc.rebin(binning).plot(ax=ax[i], label = detector)
         signal = lc.signal
         ax[i].axhline(np.mean(signal),color = 'blue')
