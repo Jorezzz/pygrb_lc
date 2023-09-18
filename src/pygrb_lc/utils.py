@@ -1,6 +1,7 @@
 import numpy as np
 import bs4
 import pandas as pd
+
 from .config import GBM_DETECTOR_CODES, logging
 
 def Chi2_polyval(x: np.array, y: np.array, param: np.array):
@@ -56,7 +57,7 @@ def parse_html_table(html_string: str):
     data = []
     for table in tables:
         all_th = table.find_all('th')
-        all_heads = [th.get_text() for th in all_th]
+        all_heads = [th.get_text().strip() for th in all_th]
         for tr in table.find_all('tr'):
             all_th = tr.find_all('th')
             if all_th:
@@ -93,3 +94,17 @@ def get_detectors_from_GBM_mask(detector_mask: str):
         list of most luminant detectors (list[str])
     '''
     return [GBM_DETECTOR_CODES[i] for i,value in enumerate(list(detector_mask)) if value == '1']
+
+def get_overlaping_intersection(left_time, right_time, left_time_column, right_time_column):
+    '''
+    Make a boolean mask for time intervals with overlaping intersection
+    Args:
+        left_time: left time interval value
+        right_time: right time interval value
+        left_time_column: left time column (or any other array-like object)
+        right_time_column: right time column (or any other array-like object)
+    '''
+    return ((left_time_column > left_time)&(left_time_column < right_time))| \
+            ((right_time_column > left_time)&(right_time_column < right_time))| \
+            ((left_time_column < left_time)&(right_time_column > left_time))| \
+            ((left_time_column < right_time)&(right_time_column > right_time))
