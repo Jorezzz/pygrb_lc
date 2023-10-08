@@ -13,7 +13,7 @@ import pandas as pd
 from .transformations import rebin_data
 from ..config import LIGHT_CURVE_SAVE
 from ..time import change_fermi_seconds, change_utc
-from ..utils import retry, parse_html_table, get_overlaping_intersection, download
+from ..utils import retry, parse_html_table, get_overlaping_intersection
 
 
 logging.getLogger('matplotlib.font_manager').setLevel(logging.ERROR)
