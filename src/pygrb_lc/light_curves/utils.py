@@ -46,11 +46,11 @@ def calculate_t_90(times: np.array, intergal_curve: np.array, left_interval, rig
     left_interval = left_interval if is_iterable(left_interval) else (times[0],left_interval)
     right_interval = right_interval if is_iterable(right_interval) else (right_interval,times[-1])
 
-    mask = [(times >= left_interval[0]) & (times <= left_interval[1])]
+    mask = (times >= left_interval[0]) & (times <= left_interval[1])
     level_low = np.polyfit(times[mask],intergal_curve[mask],0)[0]
     d_low = np.sqrt(np.var(intergal_curve[mask] - level_low))
 
-    mask = [(times >= right_interval[0]) & (times <= right_interval[1])]
+    mask = (times >= right_interval[0]) & (times <= right_interval[1])
     level_high = np.polyfit(times[mask],intergal_curve[mask],0)[0]
     d_high = np.sqrt(np.var(intergal_curve[mask] - level_high))
 
