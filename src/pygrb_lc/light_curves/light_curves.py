@@ -10,9 +10,10 @@ import matplotlib as mpl
 import requests
 import pandas as pd
 
+from .transformations import rebin_data
 from ..config import LIGHT_CURVE_SAVE
 from ..time import change_fermi_seconds, change_utc
-from ..utils import retry, parse_html_table, get_overlaping_intersection
+from ..utils import retry, parse_html_table, get_overlaping_intersection, download
 
 
 logging.getLogger('matplotlib.font_manager').setLevel(logging.ERROR)
@@ -96,38 +97,6 @@ class LightCurve():
             if logy:
                 ax.set_yscale('log')
 
-    @staticmethod
-    def rebin_data(times,
-                    signal,
-                    resolution,
-                    bin_duration: float = None, 
-                    binning: np.array = None):
-
-        '''
-        Auxiliary method for rebining the light curve
-
-        '''
-        if binning is None:
-            # binning = np.linspace(times[0]+bin_duration,
-            #                       times[-1]-bin_duration,
-            #                       num=int(((times[-1]-resolution) - (times[0]+resolution))/bin_duration))
-            N_new_bins = int(np.floor((times[-1] - times[0] + resolution)/bin_duration)+1)
-            binning = times[0] - resolution/2 + np.linspace(0, N_new_bins*bin_duration, num = N_new_bins+1)
-            
-        new_times = binning[:-1] + bin_duration/2
-        # fill the time error array
-        new_times_err = np.ones_like(new_times)*bin_duration/2
-        # determine the number of counts in each bin
-        new_counts = np.histogram(times, bins=binning)[0]
-        # determine the signal in each bin
-        new_signal = np.histogram(times, bins=binning, weights=signal)[0]
-        # determine the signal error in each bin
-        new_signal_err = np.sqrt(np.histogram(times, bins=binning, weights=signal**2)[0])
-        # determine the signal error in each bin
-        new_signal_err = new_signal_err/np.sqrt(new_counts)
-        # return the binned data
-        return new_times[:-1], new_times_err[:-1], new_signal[:-1], new_signal_err[:-1], binning
-
     def rebin(self, bin_duration: float = None, reset: bool = True):
         '''
         Rebin light curve from original time resolution
@@ -143,9 +112,9 @@ class LightCurve():
             return self
 
         if reset:
-            bined_times, bined_times_err, bined_signal, bined_signal_err, _ = self.rebin_data(self.original_times, self.original_signal, self.original_resolution, bin_duration)
+            bined_times, bined_times_err, bined_signal, bined_signal_err, _ = rebin_data(self.original_times, self.original_signal, self.original_resolution, bin_duration)
         else:
-            bined_times, bined_times_err, bined_signal, bined_signal_err, _ = self.rebin_data(self.times, self.signal, self.resolution, bin_duration)
+            bined_times, bined_times_err, bined_signal, bined_signal_err, _ = rebin_data(self.times, self.signal, self.resolution, bin_duration)
         
         self.signal = bined_signal
         self.signal_err = bined_signal_err
@@ -200,15 +169,16 @@ class LightCurve():
         '''
         Filter light curve to remove peaks
         Args:
-            peak_threshold (float, optional): threshold for peak removal, if negative - remove points bellow median, if positive - remove points above median
+            peak_threshold (float, optional): threshold for peak removal, if negative - remove points bellow median, if positive - remove points above median, if zero - nothing happens
         Returns:
             self
         '''
         median_flux = np.median(self.signal)
+        indexes_to_remove = []
 
         if peak_threshold < 0:
             indexes_to_remove = (self.signal - median_flux)/np.where(np.nan_to_num(self.signal_err,nan=1)==0,1,np.nan_to_num(self.signal_err,nan=1)) < peak_threshold
-        else:
+        elif peak_threshold > 0:
             indexes_to_remove = (self.signal - median_flux)/np.where(np.nan_to_num(self.signal_err,nan=1)==0,1,np.nan_to_num(self.signal_err,nan=1)) >= peak_threshold
 
         self.signal = np.delete(self.signal, indexes_to_remove)
@@ -228,7 +198,7 @@ class LightCurve():
         self.signal_err = np.sqrt(self.original_signal)
         self.resolution = self.original_resolution
 
-    def __get_light_curve_from_data(self,data):
+    def __get_light_curve_from_data(self, data):
         '''
         Appends data from data to light curve object
         Args:
@@ -252,24 +222,33 @@ class LightCurve():
             self.resolution = self.original_resolution
 
     @classmethod
-    def load(cls,filename: str):
-
+    def load(cls, 
+             filename: str = None, 
+             event_time: str = None, 
+             duration: int = None, 
+             resolution: float = None):
         '''
-        Load light curve from file without extension
+        Load light curve from file, either filename or event_time, duration and resolution should be provided
+        Args:
+            filename (str, optional): filename where to load data from, 
         '''
-        with open(f'{LIGHT_CURVE_SAVE}{filename}.pkl','rb') as f:
-            cls = pickle.load(f)
-        return cls
+        if (not filename) or (not (event_time and duration and resolution)):
+            raise ValueError("Either filename or lc parameters should be provided")
+        
+        filename = filename if filename else f'{event_time.replace(":","_")}_{int(duration)}_{resolution}.txt'
+        data = np.loadtxt(f'{LIGHT_CURVE_SAVE}{filename}')
+        return cls(data = data)
 
-    def save(self,filename: str = None):
+    def save(self, filename: str = None):
         '''
         Save light curve to file
         Args:
             filename (str, optional): file name without extension
         '''
-        filename = filename if filename else f'{self.event_time[0:10]}_{self.event_time[11:13]}_{self.event_time[14:16]}_{self.event_time[17:19]}__{self.duration}__{self.original_resolution}'
-        with open(f'{LIGHT_CURVE_SAVE}{filename}.pkl','wb') as f:
-            pickle.dump(self,f)
+        filename = filename if filename else f'{self.event_time.replace(":","_")}_{int(self.duration)}_{self.original_resolution}.txt'
+        np.savetxt(f'{LIGHT_CURVE_SAVE}{filename}',
+                   np.hstack(self.original_times.reshape(-1, 1), 
+                             self.original_signal.reshape(-1, 1)))
 
 
 
@@ -391,6 +370,8 @@ class SPI_ACSLightCurve(LightCurve):
             temp_times = temp_times/(24*60*60) + event_time_ijd
 
         return temp_times,temp_signal
+    
+
 
 
 
@@ -406,6 +387,8 @@ class GBMLightCurve(LightCurve):
                  scale = 'utc',
                  apply_redshift: bool = True,
                  filter_energy: dict = None,
+                 save_mid_process = True,
+                 data = None,
                  **kwargs):
         '''
         Args:
@@ -417,11 +400,18 @@ class GBMLightCurve(LightCurve):
             scale (str, optional): Scale of the light curve, can be 'utc' or 'ijd', default to 'utc'
             apply_redshift (bool, optional): Apply redshift to the light curve, default to True
             filter_energy (dict, optional): Apply energy filter to the light curve, dict with low and high energy shoud be provided, otherwise None
+            save_mid_process (bool): whether to save fits files for futher usage, uses disk space
         '''
-        super().__init__(code,**kwargs)
+        if data is not None:
+            self.photon_data = data
+            self.original_times, _, self.original_signal, _, _ = rebin_data(data[:,0], np.full(data.shape[0],1), 0, original_resolution, None)
+            super().__init__(code, **kwargs)
+        else:
+            super().__init__(code, data = data, **kwargs)
+            
         self.code = code
         self.redshift = redshift if redshift else 0
-        self.photon_data = {}
+        self.photon_data = None
         self.original_resolution = original_resolution if original_resolution else 0.01
 
         if self.original_times is None:
@@ -430,7 +420,8 @@ class GBMLightCurve(LightCurve):
                     self.original_times,self.original_signal = self.__get_light_curve_from_web(lumined_detectors, 
                                                                                                apply_redshift, 
                                                                                                filter_energy, 
-                                                                                               scale = scale)
+                                                                                               scale = scale,
+                                                                                               save = save_mid_process)
                 else:
                     if self.duration is None:
                         raise ValueError('Duration of GRB is not provided, please provide it in the constructor')
@@ -438,7 +429,8 @@ class GBMLightCurve(LightCurve):
                     self.original_times,self.original_signal = self.__get_light_curve_from_web(lumined_detectors, 
                                                                                                apply_redshift, 
                                                                                                filter_energy, 
-                                                                                               scale = scale, 
+                                                                                               scale = scale,
+                                                                                               save = save_mid_process,
                                                                                                load_daily = True)
             else:
                 NotImplementedError(f'Loading method {loading_method} not implemented')
@@ -450,7 +442,8 @@ class GBMLightCurve(LightCurve):
                                    apply_redshift: bool, 
                                    filter_energy: bool, 
                                    scale = 'utc', 
-                                   load_daily: bool = False):
+                                   load_daily: bool = False,
+                                   save = True):
         '''
         Binds the light curve from individual photons in lumined detectors
         Args:
@@ -479,7 +472,7 @@ class GBMLightCurve(LightCurve):
                 data = None
                 for date in pd.date_range(left_new, right_new, freq='1H'):
                     url = f'https://heasarc.gsfc.nasa.gov/FTP/fermi/data/gbm/daily/{str(date.year).zfill(2)}/{str(date.month).zfill(2)}/{str(date.day).zfill(2)}/current/glg_tte_{detector}_{date.to_pydatetime().strftime("%y%m%d")}_{str(date.hour).zfill(2)}z'
-                    hdul = self.load_fits(url, file_extension = 'fit.gz')
+                    hdul = self.load_fits(url, file_extension = 'fit.gz', save = save)
                     ebounds = {line[0]:np.sqrt(line[1]*line[2]) for line in hdul[1].data}
                     day_data = np.array(hdul[2].data.tolist())
                     day_data[:, 1] = [ebounds[x] for x in day_data[:, 1]]
@@ -490,7 +483,7 @@ class GBMLightCurve(LightCurve):
                 data = data[np.where((data[:, 0] > -self.duration) & (data[:, 0] < self.duration))]
             else:
                 url = f'https://heasarc.gsfc.nasa.gov/FTP/fermi/data/gbm/bursts/20{self.code[2]}{self.code[3]}/{self.code}/current/glg_tte_{detector}_{self.code}'
-                hdul = self.load_fits(url, file_extension = 'fit')
+                hdul = self.load_fits(url, file_extension = 'fit', save = save)
                 ebounds = {line[0]:np.sqrt(line[1]*line[2]) for line in hdul[1].data}
                 tzero = float(hdul[2].header['TZERO1'])
                 data = np.array(hdul[2].data.tolist())
@@ -512,7 +505,7 @@ class GBMLightCurve(LightCurve):
 
             self.photon_data = np.concatenate((self.photon_data,data)) if self.photon_data is not None else data
 
-            bined_times,_,bined_signal,_,binning = self.rebin_data(data[:,0], np.full(data.shape[0],1), 0, self.original_resolution, binning)
+            bined_times,_,bined_signal,_,binning = rebin_data(data[:,0], np.full(data.shape[0],1), 0, self.original_resolution, binning)
             times_array.append(bined_times)
             signal_array.append(bined_signal)
             
@@ -522,7 +515,7 @@ class GBMLightCurve(LightCurve):
         return times,signal
     
     @staticmethod
-    def load_fits(url: str, file_extension: str = 'fit'):
+    def load_fits(url: str, file_extension: str = 'fit', save = True):
         '''
         Loads fits file from heasarc server
         Args:
@@ -534,9 +527,17 @@ class GBMLightCurve(LightCurve):
         for i in range(5):
             logging.debug(f'Loading {url}_v0{i}.{file_extension}, try {i}')
             try:
-                return retry(fits.open(f"{url}_v0{i}.{file_extension}"))
-            except requests.exceptions.HTTPError:
-                pass
+                with open(f"{LIGHT_CURVE_SAVE}{url.split('/')[-1]}_v0{i}.pkl", "rb") as f:
+                    return pickle.load(f)
+            except Exception as e:
+                try:
+                    data = retry(fits.open(f"{url}_v0{i}.{file_extension}"))
+                    if save:
+                        with open(f"{LIGHT_CURVE_SAVE}{url.split('/')[-1]}_v0{i}.pkl", "wb") as f:
+                            pickle.dump(data, f)
+                    return data
+                except requests.exceptions.HTTPError:
+                    pass
         raise ValueError(f'No data found for {url}_v0{i}.{file_extension}') 
         
     @staticmethod
@@ -583,7 +584,7 @@ class GBMLightCurve(LightCurve):
         if (bin_duration is None) or (reset is False):
             return super().rebin(bin_duration, reset)
         else:
-            bined_times, bined_times_err, bined_signal, bined_signal_err, _ = self.rebin_data(self.photon_data[:,0], np.full(self.photon_data.shape[0],1), 0, bin_duration)
+            bined_times, bined_times_err, bined_signal, bined_signal_err, _ = rebin_data(self.photon_data[:,0], np.full(self.photon_data.shape[0],1), 0, bin_duration)
 
             self.signal = bined_signal
             self.signal_err = bined_signal_err
@@ -592,6 +593,16 @@ class GBMLightCurve(LightCurve):
             self.resolution = bin_duration
 
             return self
+        
+    def save(self, filename: str = None):
+        '''
+        Save light curve to file
+        Args:
+            filename (str, optional): filename without extension
+        '''
+        filename = filename if filename else f'{self.event_time.replace(":","_")}_{int(self.duration)}.txt'
+        np.savetxt(f'{LIGHT_CURVE_SAVE}{filename}',
+                   self.photon_data)
         
 
 

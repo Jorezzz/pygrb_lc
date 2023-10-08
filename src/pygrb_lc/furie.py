@@ -53,7 +53,7 @@ def group_log_bins(freqs: np.array, ps: np.array, N_bins: int = 30, step: float 
         time.append(np.mean(freqs[mask1]) if len(ps[mask1]) != 0 else 10**log_scale[i])
         time_err.append((10**(log_scale[i] + step) - 10**(log_scale[i]) + 10**(log_scale[i]) - 10**(log_scale[i] - step))/2)
         flux.append(np.mean(ps[mask1]) if len(ps[mask1])!=0 else 0)
-        flux_err.append(chi2.ppf(0.67, 2*len(ps[mask1]))/len(ps[mask1]) if len(ps[mask1]) != 0 else 1)
+        flux_err.append(np.sqrt(np.sum(np.full(len(ps[mask1]), 4))/len(ps[mask1])) if len(ps[mask1]) != 0 else 1)
     
     return np.array(time), np.array(time_err), np.array(flux), np.array(flux_err)
 
@@ -64,7 +64,8 @@ class FurieLightCurve():
                        bkg_polynom_degree: int = 3,
                        bkg_intervals: Iterable = None,
                        pad_size: int = None,
-                       window: Callable = None
+                       window: Callable = None,
+                       filter_peaks_threshold = 0
                        ):
 
         '''
@@ -75,6 +76,7 @@ class FurieLightCurve():
             bkg_polynom_degree (int, optional): background polynom degree, defaults to 3
             pad_size (int, optional): number of bins to pad, if None then doesn't pad
             window (function, optional): window function, that applies to signal, defaults to None
+            filter_peaks_threshold (float, optional): significance threshold for filtering outliers, 0 does nothing
         '''
         self.light_curve = light_curve
 
@@ -90,14 +92,14 @@ class FurieLightCurve():
         self.bkg_intervals = bkg_intervals
         self.interval_t90 = interval_t90
 
-        rebined_param = np.polyfit(self.light_curve.rebin(bkg_substraction_resolution).set_intervals(*bkg_intervals).times,
-                                   self.light_curve.rebin(bkg_substraction_resolution).set_intervals(*bkg_intervals).signal,
+        rebined_param = np.polyfit(self.light_curve.rebin(bkg_substraction_resolution).set_intervals(*bkg_intervals).filter_peaks(filter_peaks_threshold).times,
+                                   self.light_curve.rebin(bkg_substraction_resolution).set_intervals(*bkg_intervals).filter_peaks(filter_peaks_threshold).signal,
                                    bkg_polynom_degree)
         rebined_param = rebined_param * (self.light_curve.original_resolution/self.light_curve.resolution)
         self.rebined_param = rebined_param
         self.N = np.sum(self.light_curve.rebin().set_intervals(interval_t90).signal)
 
-        signal = self.light_curve.rebin().substract_polynom(rebined_param).set_intervals(interval_t90).signal
+        signal = self.light_curve.rebin().substract_polynom(rebined_param).set_intervals(interval_t90).filter_peaks().signal
         
 
         if window is not None:
