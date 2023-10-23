@@ -29,7 +29,7 @@ def make_pds(signal, time_step, total_counts = None, pad_size = None):
     
     return freqs[mask], ps[mask]
 
-def group_log_bins(freqs: np.array, ps: np.array, N_bins: int = 30, step: float = None, log_scale: np.array = None):
+def group_log_bins(freqs: np.array, ps: np.array, N_bins: int = 30, step: float = None, log_scale: np.array = None, ps_err = None):
     '''
     Group bins in log scale
     Args:
@@ -53,7 +53,10 @@ def group_log_bins(freqs: np.array, ps: np.array, N_bins: int = 30, step: float 
         time.append(np.mean(freqs[mask1]) if len(ps[mask1]) != 0 else 10**log_scale[i])
         time_err.append((10**(log_scale[i] + step) - 10**(log_scale[i]) + 10**(log_scale[i]) - 10**(log_scale[i] - step))/2)
         flux.append(np.mean(ps[mask1]) if len(ps[mask1])!=0 else 0)
-        flux_err.append(np.sqrt(np.sum(np.full(len(ps[mask1]), 4))/len(ps[mask1])) if len(ps[mask1]) != 0 else 1)
+        if ps_err is None:
+            flux_err.append(np.sqrt(np.sum(np.full(len(ps[mask1]), 4)))/len(ps[mask1]) if len(ps[mask1]) != 0 else 1)
+        else:
+            flux_err.append(np.sqrt(np.sum(np.square(ps_err[mask1])))/len(ps_err[mask1]) if len(ps_err[mask1]) != 0 else 1)
     
     return np.array(time), np.array(time_err), np.array(flux), np.array(flux_err)
 
