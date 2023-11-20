@@ -247,8 +247,8 @@ class LightCurve():
         '''
         filename = filename if filename else f'{self.event_time.replace(":","_")}_{int(self.duration)}_{self.original_resolution}.txt'
         np.savetxt(f'{LIGHT_CURVE_SAVE}{filename}',
-                   np.hstack(self.original_times.reshape(-1, 1), 
-                             self.original_signal.reshape(-1, 1)))
+                   np.hstack((self.original_times.reshape(-1, 1), 
+                              self.original_signal.reshape(-1, 1))))
 
 
 
