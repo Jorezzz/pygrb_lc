@@ -387,7 +387,7 @@ class GBMLightCurve(LightCurve):
                  scale = 'utc',
                  apply_redshift: bool = True,
                  filter_energy: dict = None,
-                 save_mid_process = True,
+                 save_mid_process = False,
                  data = None,
                  **kwargs):
         '''
