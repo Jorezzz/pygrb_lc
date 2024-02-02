@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import requests
 import pandas as pd
+import urllib.error
 
 from .transformations import rebin_data
 from ..config import LIGHT_CURVE_SAVE
@@ -536,7 +537,7 @@ class GBMLightCurve(LightCurve):
                         with open(f"{LIGHT_CURVE_SAVE}{url.split('/')[-1]}_v0{i}.pkl", "wb") as f:
                             pickle.dump(data, f)
                     return data
-                except requests.exceptions.HTTPError:
+                except (urllib.error.HTTPError, requests.exceptions.HTTPError):
                     pass
         raise ValueError(f'No data found for {url}_v0{i}.{file_extension}') 
         
